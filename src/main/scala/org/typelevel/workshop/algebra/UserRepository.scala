@@ -4,6 +4,7 @@ import org.typelevel.workshop.model.User
 
 trait UserRepository[F[_]] {
   def addUser(username: String, email: String): F[Option[User]]
+  def getAll: F[List[User]]
 }
 
 object UserRepository {

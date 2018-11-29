@@ -15,5 +15,10 @@ object UserRepositoryIO {
         .attemptSql
         .map(_.toOption.map(id => User(id, username, email)))
         .transact(Database.xa)
+
+    def getAll: IO[List[User]] = 
+    	sql"""
+    		SELECT id, username, email FROM user
+    	""".query[User].to[List].transact(Database.xa)
   }
 }
