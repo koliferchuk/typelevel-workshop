@@ -9,6 +9,7 @@ import org.typelevel.workshop.http.{ProjectService, UserService}
 import org.typelevel.workshop.db.Database
 import org.typelevel.workshop.interpreters.ProjectRepositoryIO._
 import org.typelevel.workshop.interpreters.UserRepositoryIO._
+import org.typelevel.workshop.interpreters.LoggingIO._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

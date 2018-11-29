@@ -7,9 +7,9 @@ import io.circe.generic.auto._
 import org.http4s.HttpService
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.dsl.Http4sDsl
-import org.typelevel.workshop.algebra.UserRepository
+import org.typelevel.workshop.algebra.{ UserRepository, Logging }
 
-class UserService[F[_]: Sync: UserRepository] extends Http4sDsl[F] {
+class UserService[F[_]: Sync: UserRepository: Logging] extends Http4sDsl[F] {
 
   case class CreateUserRequest(name: String, email: String)
 
