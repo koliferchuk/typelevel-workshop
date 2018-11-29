@@ -7,6 +7,7 @@ import io.circe._
 import io.circe.syntax._
 import io.circe.parser._
 import cats.implicits._
+// import io.circe.generic.auto._ // generates automaticaly encoders and decoders for (ADT)
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -26,7 +27,12 @@ object circe {
 
 
   //Implement an encoder for `Project`
-  implicit def projectEncoder: Encoder[Project] = ???
+  implicit def projectEncoder: Encoder[Project] = new Encoder[Project] {
+    def apply(p: Project): Json = Json.obj(
+      "maintainer" -> p.maintainer.asJson,
+      "stars" -> Json.fromInt(p.stars)
+    )
+  }
 
 
 
@@ -64,10 +70,36 @@ object circe {
 
   // Define an encoder and decoder instance for `Holiday`
   sealed trait HolidayType
-  case class Fixed(date: MonthDay) extends HolidayType
+  case class Fixed(date: String) extends HolidayType
   case class Floating(date: LocalDate) extends HolidayType
 
   // Define an encoder and decoder instance for `Holiday`
   case class Holiday(id: Int, name: String, holidayType: HolidayType)
+
+  implicit def holidayTypeEncoder: Encoder[HolidayType] = new Encoder[HolidayType] {
+    def apply(t: HolidayType): Json = t match {
+      case Fixed(date) => date.asJson
+      case Floating(date) => date.asJson
+    }
+  }
+
+  implicit def holidayTypeDecoder: Decoder[HolidayType] = 
+    Decoder[LocalDate].map(Floating(_)).or(Decoder[String].map(Fixed(_)))
+
+  implicit def holidayEncoder: Encoder[Holiday] = new Encoder[Holiday] {
+    def apply(h: Holiday): Json = Json.obj(
+      "id" -> h.id.asJson,
+      "name" -> h.name.asJson,
+      "holidayType" -> h.holidayType.asJson
+    )
+  }
+
+  implicit def holidayDecoder: Decoder[Holiday] = new Decoder[Holiday] {
+    def apply(c: HCursor): Result[Holiday] = for {
+      id <- c.downField("id").as[Int]
+      name <- c.downField("name").as[String]
+      holidayType <- c.downField("holidayType").as[HolidayType]
+    } yield Holiday(id, name, holidayType)
+  }
 
 }
