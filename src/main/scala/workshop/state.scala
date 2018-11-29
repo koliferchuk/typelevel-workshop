@@ -2,6 +2,7 @@ package workshop
 
 import workshop.monoids.Monad
 import workshop.typeclasses.Show
+import workshop.typeclasses.Show.ops._
 
 object state {
 
@@ -29,12 +30,10 @@ object state {
 
 
   //Implement the monad instance for State
-  implicit def stateMonad[S]: Monad[State[S, ?]] = ???
-
-
-
-
-
+  implicit def stateMonad[S]: Monad[State[S, ?]] = new Monad[State[S, ?]] {
+    def flatMap[A, B](fa: State[S, A])(f: A => State[S, B]): State[S, B] = fa.flatMap(f)
+    def unit: State[S, Unit] = State(s => (s, ()))
+  }
 
   sealed trait Player {
     def next: Player = this match {
@@ -79,27 +78,67 @@ object state {
     def empty: TicTacToe = TicTacToe(0.until(3).map(_ => 0.until(3).map(_ => None).toList).toList, Cross)
   }
 
+  implicit def showPlayer: Show[Player] = new Show[Player] {
+    def show(a: Player): String = a match {
+      case Cross => "X"
+      case Circle => "O" 
+    }
+  }
+
   // Implement a Show instance for TicTacToe that prints out three rows and columns and uses `O` and `X` for the players
-  implicit def showTicTacToe: Show[TicTacToe] = ???
+  implicit def showTicTacToe: Show[TicTacToe] = new Show[TicTacToe] {
+    def show(a: TicTacToe): String = {
+      val top = s"It's ${a.turn}'s turn"
+      val newLine = "\n"
+      val board = a.board
+
+      val boardStr = board.foldLeft(""){ (acc, row) => 
+        acc + row.foldLeft("")((s, p) => s + p.map(_.show).getOrElse(" ")) + newLine
+      }
+
+      top + newLine + newLine + boardStr
+    }
+  }
 
 
   // Use the State data type to model the state transitions of a tic tac toe game
-  def place(posX: Int, posY: Int): State[TicTacToe, Unit] = ???
+  def place(posX: Int, posY: Int): State[TicTacToe, Unit] = 
+    State.modify(_.place(posX, posY))
 
 
-  def isGameOver: State[TicTacToe, Boolean] = ???
+  def isGameOver: State[TicTacToe, Boolean] =
+    State.get[TicTacToe].map(tictactoe => tictactoe.isGameOver)
 
 
-  def crossHasWon: State[TicTacToe, Boolean] = ???
+  def crossHasWon: State[TicTacToe, Boolean] = 
+    State.get[TicTacToe].map(tictactoe => tictactoe.hasPlayerWon.contains(Cross))
 
-  def circleHasWon: State[TicTacToe, Boolean] = ???
+  def circleHasWon: State[TicTacToe, Boolean] = 
+    State.get[TicTacToe].map(tictactoe => tictactoe.hasPlayerWon.contains(Circle))
+
+  def isDraw: State[TicTacToe, Boolean] = for {
+    gameOver <- isGameOver
+    circleWon <- circleHasWon
+    crossWon <- crossHasWon
+  } yield !circleWon && !crossWon && gameOver
 
   // Define a full game using a for comprehension and return the winner
-  def fullGame: State[TicTacToe, Option[Player]] = ???
-
-
+  def fullGame: State[TicTacToe, Option[Player]] = for {
+    _ <- place(0, 0)
+    _ <- place(1, 0)
+    _ <- place(2, 1)
+    _ <- place(0, 1)
+    _ <- place(0, 2)
+    _ <- place(1, 2)
+    _ <- place(2, 2)
+    _ <- place(1, 1)
+    circleWon <- circleHasWon
+    crossWon <- crossHasWon
+  } yield {
+    if (circleWon) { Some(Circle) } else if (crossWon) { Some(Cross) } else { None }
+  }
   // Now we run the state using `run` to get the final board and the player that won
 
-
+  val (endResult, player) = fullGame.run(TicTacToe.empty)
 
 }
