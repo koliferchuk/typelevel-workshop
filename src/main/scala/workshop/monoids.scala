@@ -204,8 +204,9 @@ object monoids {
     override def product[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
       flatMap(fa)(a => map(fb)(b => (a, b)))
 
-    override def map[A, B](fa: F[A])(f: A => B): F[B] =
+    override def map[A, B](fa: F[A])(f: A => B): F[B] = {
       flatMap(fa)(a => pure(f(a)))
+    }
   }
 
   implicit def monadOption: Monad[Option] = new Monad[Option] {
@@ -267,16 +268,16 @@ object monoids {
   type FailFunc[A, B] = Kleisli[Either[Throwable, ?], A, B]
   // IO
 
-  case class IO[A](unsafeRun: () => A) {
-    def map[B](f: A => B): IO[B] = 
-      IO(() => f(unsafeRun()))
-  }
+  case class IO[A](unsafeRun: () => A)
 
   implicit def monadIO: Monad[IO] = new Monad[IO] {
     def flatMap[A, B](fa: IO[A])(f: A => IO[B]): IO[B] = 
       IO(() => f(fa.unsafeRun()).unsafeRun()) // f(fa.unsafeRun()) - will compile but is UNSAFE!!! Running unsafeRun function is alowed only in main method and inside IO ( IO(() => unsafe call) )
 
     def unit: IO[Unit] = IO(() => ())
+
+    override def map[A, B](fa: IO[A])(f: A => B): IO[B] = 
+      IO(() => f(fa.unsafeRun()))
   }
 
   // Run both effects one after another, but only return the result of the second (IO[Int] *> IO[String] == IO[String])
