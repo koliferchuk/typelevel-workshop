@@ -7,13 +7,23 @@ import workshop.monoids.{IO, Monad}
 import workshop.typeclasses.Monoid.ops._
 import workshop.abstractions.Traverse.ops._
 import workshop.abstractions.Monoidal.ops._
+import workshop.abstractions.Foldable.ops._
 import workshop.monoids.Monad.ops._
 
 object traversables {
 
   // This function is like traverse, but ignores all the results and can therefore be implemented with fold
   // For this you might need to create a custom `Monoid` derived from a `Monoidal`
-  def traverse_[T[_]: Foldable, F[_]: Monoidal, A, B](ta: T[A])(f: A => F[B]): F[Unit] = ???
+  def traverse_[T[_]: Foldable, F[_]: Monoidal, A, B](ta: T[A])(f: A => F[B]): F[Unit] = {
+
+    implicit def funitMonoid: Monoid[F[Unit]] = new Monoid[F[Unit]] {
+      def empty: F[Unit] = Monoidal[F].unit
+      def combine(x: F[Unit], y: F[Unit]): F[Unit] = 
+        Monoidal[F].map2(x, y)((_, _) => ())
+    }
+
+    ta.foldMap(a => f(a).map(_ => ()))
+  }
 
 
   case class User(name: String, age: Int)
